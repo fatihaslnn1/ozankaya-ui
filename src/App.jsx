@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as signalR from '@microsoft/signalr';
+import { Analytics } from '@vercel/analytics/react';
 
 const API_URL = "https://ozankaya-api.onrender.com/api/appointments";
 const HUB_URL = "https://ozankaya-api.onrender.com/appointmentHub";
@@ -222,7 +223,6 @@ export default function App() {
         method: 'POST'
       });
       if (response.ok) {
-        // SMS alertini sildik, sadece listeyi yeniliyoruz ki aşağıya düşsün
         fetchAppointments();
       } else {
         alert("Randevu kabul edilirken bir hata oluştu.");
@@ -239,7 +239,6 @@ export default function App() {
      a.date.includes(searchTerm))
   );
 
-  // Randevuları ikiye bölüyoruz
   const pendingAppointments = filteredAppointments.filter(a => !a.isAccepted);
   const acceptedAppointments = filteredAppointments.filter(a => a.isAccepted);
 
@@ -442,7 +441,7 @@ export default function App() {
             {/* YENİ GELEN RANDEVULAR TABLOSU */}
             <div style={{ marginBottom: '40px' }}>
               <h3 style={{ color: '#f59e0b', fontSize: '16px', marginBottom: '15px', borderBottom: '2px solid #fef3c7', paddingBottom: '10px' }}>
-                 Yeni Gelen Randevular
+                  Yeni Gelen Randevular
               </h3>
               <div style={{ overflowX: 'auto' }}>
                 <table style={styles.table}>
@@ -548,6 +547,7 @@ export default function App() {
         )}
 
       </div>
+      <Analytics />
     </div>
   );
 }
