@@ -16,8 +16,6 @@ const timeSlots = [
   "17:00", "18:00", "19:00", "20:00"
 ];
 
-// YENİ EKLENEN: Yerel saati baz alarak YYYY-MM-DD formatında bugünü verir.
-// Tam 00:00'da diğer güne geçmeyi garanti eder.
 const getLocalDateString = () => {
   const date = new Date();
   const year = date.getFullYear();
@@ -29,7 +27,7 @@ const getLocalDateString = () => {
 export default function App() {
   const [adminBarber, setAdminBarber] = useState(null); 
   const [selectedBarber, setSelectedBarber] = useState(1);
-  const [selectedDate, setSelectedDate] = useState(getLocalDateString()); // Varsayılan olarak hep "bugün" ile açılır
+  const [selectedDate, setSelectedDate] = useState(getLocalDateString());
   const [disabledSlots, setDisabledSlots] = useState([]);
   const [selectedTime, setSelectedTime] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -242,44 +240,35 @@ export default function App() {
     }
   };
 
-  // 1. Yeni Gelen (Onaylanmamış) randevular tarihe takılmadan her zaman ekranda kalır
-const yeniGelenRandevular = appointments.filter(a => {
-  const status = String(a.status || a.durum || '').toLowerCase();
-  const isPending = !status.includes('onay') && status !== 'kabul';
-  return isPending && (!adminBarber || a.barberId === adminBarber);
-});
+  // Tarihleri güvenli bir şekilde eşitlemek için yardımcı fonksiyon
+  const normalizeDate = (d) => {
+    if (!d) return '';
+    return String(d).split('T')[0].trim();
+  };
 
-// 2. Kabul Edilen randevular SADECE yukarıda seçilen tarihle eşleştiğinde görünür
-const kabulEdilenRandevular = appointments.filter(a => {
-  const status = String(a.status || a.durum || '').toLowerCase();
-  const isAccepted = status.includes('onay') || status === 'kabul';
-  
-  // Tarih karşılaştırması (Giriş formatı ne olursa olsun YYYY-MM-DD olarak yakalar)
-  const randevuTarihi = String(a.date || '').split('T')[0].split(' ').join('-');
-  const secilenTarih = String(selectedDate || '').split('T')[0].split(' ').join('-');
+  // 1. Yeni Gelen (Onaylanmamış) Randevular: Tarih bağımsız, seçilen berbere ait ve onay bekleyenler her zaman kalır
+  const pendingAppointments = appointments.filter(a => {
+    const isAccepted = a.isAccepted === true || 
+                       String(a.status || a.durum || '').toLowerCase().includes('onay') || 
+                       String(a.status || a.durum || '').toLowerCase() === 'kabul';
+    const matchesBarber = !adminBarber || Number(a.barberId) === Number(adminBarber);
+    return !isAccepted && matchesBarber;
+  });
 
-  // Not: Eğer senin tarihler "DD-MM-YYYY" veya "YYYY-MM-DD" şeklinde farklı formatta tutuluyorsa 
-  // burada tam eşleşme sağlanır.
-  const tarihEslesiyorMu = randevuTarihi.includes(secilenTarih) || secilenTarih.includes(randevuTarihi);
-
-  return isAccepted && tarihEslesiyorMu && (!adminBarber || a.barberId === adminBarber);
-});
+  // 2. Kabul Edilen Randevular: SADECE yukarıda takvimden seçilen tarihle eşleşen ve onaylanmış olanlar görünür
+  const acceptedAppointments = appointments.filter(a => {
+    const isAccepted = a.isAccepted === true || 
+                       String(a.status || a.durum || '').toLowerCase().includes('onay') || 
+                       String(a.status || a.durum || '').toLowerCase() === 'kabul';
+    const matchesBarber = !adminBarber || Number(a.barberId) === Number(adminBarber);
     
-}
-;
-  
-  ;
+    const appDate = normalizeDate(a.date);
+    const selDate = normalizeDate(selectedDate);
+    const matchesDate = appDate === selDate;
 
-  // FİLTRELEME MANTIĞI:
-  // Yeni gelen (onay bekleyenler): Tarih fark etmeksizin tüm bekleyenleri getir (gözden kaçmaması için).
-  const pendingAppointments = filteredAppointments.filter(a => !a.isAccepted);
-  
-  // Kabul edilenler: SADECE adminin o an takvimden seçtiği (veya varsayılan olarak bugünün) tarihine ait olanlar gelsin.
-  const acceptedAppointments = filteredAppointments.filter(a => 
-  a.isAccepted && String(a.date).split('T')[0] === selectedDate
-);
+    return isAccepted && matchesBarber && matchesDate;
+  });
 
-  // Tarihi Türk usulü GG.AA.YYYY formatına çevir (Başlıkta göstermek için)
   const displayDate = selectedDate.split('-').reverse().join('.');
 
   return (
@@ -590,7 +579,7 @@ const kabulEdilenRandevular = appointments.filter(a => {
       <Analytics />
     </div>
   );
-
+}
 
 const styles = {
   page: {
@@ -924,4 +913,4 @@ const styles = {
     cursor: 'pointer',
     fontWeight: '700',
   }
-};   // build tetikleme
+};
