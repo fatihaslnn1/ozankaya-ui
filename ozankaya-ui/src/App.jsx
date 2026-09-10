@@ -266,12 +266,7 @@ export default function App() {
     return !isAccepted && matchesBarber;
   });
 
-  // 2. Kabul Edilen Randevular: SADECE yukarıda takvimden seçilen tarihle eşleşen ve onaylanmış olanlar görünür
-    // 2. Kabul Edilen Randevular
-  // Geçmiş tarihteki kabul edilmiş randevular GÖSTERİLMEZ.
-  // Bugün ve gelecekteki kabul edilmiş randevular gösterilir.
-  const todayDate = getLocalDateString();
-
+  // 2. Kabul Edilen Randevular: Sadece takvimden hangi tarih seçildiyse o günün onaylanmış randevuları görünür
   const acceptedAppointments = appointments.filter(a => {
     const isAccepted =
       a.isAccepted === true ||
@@ -285,16 +280,7 @@ export default function App() {
     const appDate = normalizeDate(a.date);
     const selDate = normalizeDate(selectedDate);
 
-    // Bugünden eski kabul edilmiş randevuları gizle
-    const isTodayOrFuture = appDate >= todayDate;
-
-    // Sadece seçilen tarihteki kabul edilmiş randevuları göster
-    return (
-      isAccepted &&
-      matchesBarber &&
-      isTodayOrFuture &&
-      appDate === selDate
-    );
+    return isAccepted && matchesBarber && (appDate === selDate);
   });
 
   const displayDate = selectedDate.split('-').reverse().join('.');
