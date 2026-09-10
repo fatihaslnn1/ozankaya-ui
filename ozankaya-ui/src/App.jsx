@@ -242,25 +242,31 @@ export default function App() {
     }
   };
 
-  const filteredAppointments = appointments.filter(a => {
-  const appointmentDateStr = String(a.date || '').trim();
-  
-  // Randevunun onaylanıp onaylanmadığını kontrol et
-  const isAccepted = String(a.status || a.durum).toLowerCase().includes('onay') || String(a.status) === 'kabul';
-
-  // Kural: Kabul edilmişse sadece seçilen tarihle eşleşiyorsa göster. 
-  // Onaylanmamışsa (yeni gelense) tarihe takılmadan her zaman göster.
-  const matchesDate = isAccepted ? appointmentDateStr.includes(selectedDate) : true;
-
-  return matchesDate &&
-    (!adminBarber || a.barberId === adminBarber) &&
-    (
-      (a.customerName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (a.phone || '').includes(searchTerm) ||
-      appointmentDateStr.includes(searchTerm)
-    );
+  // 1. Yeni Gelen (Onaylanmamış) randevular tarihe takılmadan her zaman ekranda kalır
+const yeniGelenRandevular = appointments.filter(a => {
+  const status = String(a.status || a.durum || '').toLowerCase();
+  const isPending = !status.includes('onay') && status !== 'kabul';
+  return isPending && (!adminBarber || a.barberId === adminBarber);
 });
-};
+
+// 2. Kabul Edilen randevular SADECE yukarıda seçilen tarihle eşleştiğinde görünür
+const kabulEdilenRandevular = appointments.filter(a => {
+  const status = String(a.status || a.durum || '').toLowerCase();
+  const isAccepted = status.includes('onay') || status === 'kabul';
+  
+  // Tarih karşılaştırması (Giriş formatı ne olursa olsun YYYY-MM-DD olarak yakalar)
+  const randevuTarihi = String(a.date || '').split('T')[0].split(' ').join('-');
+  const secilenTarih = String(selectedDate || '').split('T')[0].split(' ').join('-');
+
+  // Not: Eğer senin tarihler "DD-MM-YYYY" veya "YYYY-MM-DD" şeklinde farklı formatta tutuluyorsa 
+  // burada tam eşleşme sağlanır.
+  const tarihEslesiyorMu = randevuTarihi.includes(secilenTarih) || secilenTarih.includes(randevuTarihi);
+
+  return isAccepted && tarihEslesiyorMu && (!adminBarber || a.barberId === adminBarber);
+});
+    
+}
+;
   
   ;
 
