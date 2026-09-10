@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@microsoft/signalr": "^10.0.11",
     "@vercel/analytics": "^2.0.1",
     "lucide-react": "^1.42.0",
     "react": "^19.3.0",
