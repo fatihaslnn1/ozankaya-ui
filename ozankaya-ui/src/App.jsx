@@ -242,15 +242,22 @@ export default function App() {
     }
   };
 
-  const filteredAppointments = appointments.filter(a => 
-  String(a.date).split('T')[0] === selectedDate &&
-  (!adminBarber || a.barberId === adminBarber) &&
-  (
-    a.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.phone.includes(searchTerm) ||
-    a.date.includes(searchTerm)
-  )
-);
+  const filteredAppointments = appointments.filter(a => {
+  // Eğer randevu onaylanmışsa sadece seçilen tarihte görünecek
+  // Onaylanmamış (yeni gelen) randevular ise tarihe takılmadan ekranda kalacak
+  const tarihUyuyorMu = (a.status === 'onaylandi' || a.status === 'kabul') 
+    ? String(a.date).split('T')[0] === selectedDate 
+    : true;
+
+  return tarihUyuyorMu &&
+    (!adminBarber || a.barberId === adminBarber) &&
+    (
+      a.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.phone.includes(searchTerm) ||
+      a.date.includes(searchTerm)
+    );
+});
+  
   ;
 
   // FİLTRELEME MANTIĞI:
