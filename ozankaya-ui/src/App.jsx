@@ -243,20 +243,24 @@ export default function App() {
   };
 
   const filteredAppointments = appointments.filter(a => {
-  // Eğer randevu onaylanmışsa sadece seçilen tarihte görünecek
-  // Onaylanmamış (yeni gelen) randevular ise tarihe takılmadan ekranda kalacak
-  const tarihUyuyorMu = (a.status === 'onaylandi' || a.status === 'kabul') 
-    ? String(a.date).split('T')[0] === selectedDate 
-    : true;
+  const appointmentDateStr = String(a.date || '').trim();
+  
+  // Randevunun onaylanıp onaylanmadığını kontrol et
+  const isAccepted = String(a.status || a.durum).toLowerCase().includes('onay') || String(a.status) === 'kabul';
 
-  return tarihUyuyorMu &&
+  // Kural: Kabul edilmişse sadece seçilen tarihle eşleşiyorsa göster. 
+  // Onaylanmamışsa (yeni gelense) tarihe takılmadan her zaman göster.
+  const matchesDate = isAccepted ? appointmentDateStr.includes(selectedDate) : true;
+
+  return matchesDate &&
     (!adminBarber || a.barberId === adminBarber) &&
     (
-      a.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      a.phone.includes(searchTerm) ||
-      a.date.includes(searchTerm)
+      (a.customerName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (a.phone || '').includes(searchTerm) ||
+      appointmentDateStr.includes(searchTerm)
     );
 });
+};
   
   ;
 
@@ -580,7 +584,7 @@ export default function App() {
       <Analytics />
     </div>
   );
-}
+
 
 const styles = {
   page: {
