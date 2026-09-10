@@ -92,6 +92,8 @@ export default function App() {
   }, [selectedBarber, selectedDate, adminBarber]);
 
   useEffect(() => {
+    let isMounted = true;
+
     const connection = new signalR.HubConnectionBuilder()
       .withUrl(HUB_URL)
       .configureLogging(signalR.LogLevel.Information)
@@ -100,6 +102,10 @@ export default function App() {
 
     connection.start()
       .then(() => {
+        if (!isMounted) {
+          connection.stop();
+          return;
+        }
         connection.on("SlotUpdated", (data) => {
           if (data.barberId === selectedBarber && data.date === selectedDate) {
             const timeFormatted = typeof data.time === 'string' ? data.time.substring(0, 5) : data.time;
@@ -110,9 +116,14 @@ export default function App() {
           if (adminBarber) fetchAppointments();
         });
       })
-      .catch(err => console.error("SignalR Bağlantı Hatası:", err));
+      .catch(err => {
+        if (err.name !== 'AbortError' && isMounted) {
+          console.error("SignalR Bağlantı Hatası:", err);
+        }
+      });
 
     return () => {
+      isMounted = false;
       connection.stop();
     };
   }, [selectedBarber, selectedDate, adminBarber]);
@@ -177,7 +188,7 @@ export default function App() {
           const allAppts = await resAll.json();
           const target = allAppts.find(a => 
             Number(a.barberId) === Number(selectedBarber) && 
-            String(a.date).split('T')[0] === String(selectedDate) && 
+            normalizeDate(a.date) === normalizeDate(selectedDate) && 
             String(a.time).substring(0, 5) === time
           );
 
@@ -240,10 +251,10 @@ export default function App() {
     }
   };
 
-  // Tarihleri güvenli bir şekilde eşitlemek için yardımcı fonksiyon
+  // Tarihleri boşluk, nokta, slash ve tire formatlarından bağımsız olarak tam eşitleyen fonksiyon
   const normalizeDate = (d) => {
     if (!d) return '';
-    return String(d).split('T')[0].trim();
+    return String(d).split('T')[0].trim().replace(/[\s./]/g, '-');
   };
 
   // 1. Yeni Gelen (Onaylanmamış) Randevular: Tarih bağımsız, seçilen berbere ait ve onay bekleyenler her zaman kalır
@@ -256,17 +267,34 @@ export default function App() {
   });
 
   // 2. Kabul Edilen Randevular: SADECE yukarıda takvimden seçilen tarihle eşleşen ve onaylanmış olanlar görünür
+    // 2. Kabul Edilen Randevular
+  // Geçmiş tarihteki kabul edilmiş randevular GÖSTERİLMEZ.
+  // Bugün ve gelecekteki kabul edilmiş randevular gösterilir.
+  const todayDate = getLocalDateString();
+
   const acceptedAppointments = appointments.filter(a => {
-    const isAccepted = a.isAccepted === true || 
-                       String(a.status || a.durum || '').toLowerCase().includes('onay') || 
-                       String(a.status || a.durum || '').toLowerCase() === 'kabul';
-    const matchesBarber = !adminBarber || Number(a.barberId) === Number(adminBarber);
-    
+    const isAccepted =
+      a.isAccepted === true ||
+      String(a.status || a.durum || '').toLowerCase().includes('onay') ||
+      String(a.status || a.durum || '').toLowerCase() === 'kabul';
+
+    const matchesBarber =
+      !adminBarber ||
+      Number(a.barberId) === Number(adminBarber);
+
     const appDate = normalizeDate(a.date);
     const selDate = normalizeDate(selectedDate);
-    const matchesDate = appDate === selDate;
 
-    return isAccepted && matchesBarber && matchesDate;
+    // Bugünden eski kabul edilmiş randevuları gizle
+    const isTodayOrFuture = appDate >= todayDate;
+
+    // Sadece seçilen tarihteki kabul edilmiş randevuları göster
+    return (
+      isAccepted &&
+      matchesBarber &&
+      isTodayOrFuture &&
+      appDate === selDate
+    );
   });
 
   const displayDate = selectedDate.split('-').reverse().join('.');
